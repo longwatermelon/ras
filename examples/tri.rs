@@ -1,5 +1,5 @@
 use sdl2::event::Event;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Rect;
 use sdl2::pixels::Color;
 use sdl2::render::Texture;
 use sdl2::pixels::PixelFormatEnum;
