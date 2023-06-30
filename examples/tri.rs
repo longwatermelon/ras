@@ -1,11 +1,28 @@
-use macroquad::color::*;
-use macroquad::window::*;
-use macroquad::shapes::*;
+use sdl2::event::Event;
+use sdl2::rect::{Point, Rect};
+use sdl2::pixels::Color;
+use sdl2::render::Texture;
+use sdl2::pixels::PixelFormatEnum;
 use glam::Vec3;
 use ras::{Screen, Vertex};
 
-#[macroquad::main(window_conf)]
-async fn main() {
+pub fn main() -> Result<(), String> {
+    let sdl_context = sdl2::init()?;
+    let video_subsystem = sdl_context.video()?;
+
+    let window = video_subsystem
+        .window("Triangle test", 600, 600)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut rend = window
+        .into_canvas()
+        .present_vsync()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
+
     let mut scr: Screen = Screen::new(600, 600);
     let tri: [Vertex; 3] = [
         Vertex::new(Vec3::new(0., 0., 5.)),
@@ -15,40 +32,81 @@ async fn main() {
 
     let projected: [Vertex; 3] = tri.map(|v| ras::project_vert(v, 600, 600));
 
-    loop {
-        ras::tri(&tri, &mut scr);
+    let texture_creator = rend.texture_creator();
+    let mut scrtex: Texture = texture_creator
+        .create_texture_streaming(PixelFormatEnum::RGB24, 600, 600)
+        .map_err(|e| e.to_string())?;
 
-        clear_background(BLACK);
-
-        for y in 0..scr.h {
-            for x in 0..scr.w {
-                let c: Vec3 = scr.color[y * scr.w + x];
-                draw_rectangle(x as f32, y as f32, 1., 1.,
-                    Color::from_rgba(
-                        (c.x * 255.) as u8,
-                        (c.y * 255.) as u8,
-                        (c.z * 255.) as u8,
-                        255
-                    )
-                );
+    'running: loop {
+        for evt in event_pump.poll_iter() {
+            match evt {
+                Event::Quit {..} => break 'running,
+                _ => ()
             }
         }
 
-        draw_line(projected[0].pos.x, projected[0].pos.y, projected[1].pos.x, projected[1].pos.y, 2., RED);
-        draw_line(projected[2].pos.x, projected[2].pos.y, projected[1].pos.x, projected[1].pos.y, 2., RED);
-        draw_line(projected[0].pos.x, projected[0].pos.y, projected[2].pos.x, projected[2].pos.y, 2., RED);
+        ras::tri(&tri, &mut scr);
 
-        next_frame().await
-    }
-}
+        // Render
+        rend.set_draw_color(Color::RGB(0, 0, 0));
+        rend.clear();
 
-fn window_conf() -> Conf {
-    Conf {
-        window_resizable: false,
-        window_width: 600,
-        window_height: 600,
-        window_title: String::from("Triangle test"),
-        ..Default::default()
+        // Render filled
+        scrtex.with_lock(None, |buf: &mut [u8], pitch: usize| {
+            for y in 0..600 {
+                for x in 0..600 {
+                    let offset: usize = y * pitch + x * 3;
+                    buf[offset] = (scr.color[y * 600 + x].x * 255.) as u8;
+                    buf[offset + 1] = (scr.color[y * 600 + x].y * 255.) as u8;
+                    buf[offset + 2] = (scr.color[y * 600 + x].z * 255.) as u8;
+                }
+            }
+        })?;
+
+        rend.copy_ex(
+            &scrtex,
+            None,
+            Rect::new(0, 0, 600, 600),
+            0.,
+            None,
+            false,
+            false
+        )?;
+
+        // for y in 0..rend.window().size().1 {
+        //     for x in 0..rend.window().size().0 {
+        //         let c: Vec3 = scr.color[(y * scr.w as u32 + x) as usize];
+        //         let color: Color = Color::RGB(
+        //             (c.x * 255.) as u8,
+        //             (c.y * 255.) as u8,
+        //             (c.z * 255.) as u8
+        //         );
+
+        //         rend.set_draw_color(color);
+        //         rend.draw_point(Point::new(x as i32, y as i32))?;
+        //     }
+        // }
+
+        // Render wireframe
+        rend.set_draw_color(Color::RGB(255, 0, 0));
+        rend.draw_line(
+            Point::new(projected[0].pos.x as i32, projected[0].pos.y as i32),
+            Point::new(projected[1].pos.x as i32, projected[1].pos.y as i32)
+        )?;
+
+        rend.draw_line(
+            Point::new(projected[2].pos.x as i32, projected[2].pos.y as i32),
+            Point::new(projected[1].pos.x as i32, projected[1].pos.y as i32)
+        )?;
+
+        rend.draw_line(
+            Point::new(projected[0].pos.x as i32, projected[0].pos.y as i32),
+            Point::new(projected[2].pos.x as i32, projected[2].pos.y as i32)
+        )?;
+
+        rend.present();
     }
+
+    Ok(())
 }
 

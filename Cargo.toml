@@ -9,4 +9,4 @@ edition = "2021"
 glam = "0.24.1"
 
 [dev-dependencies]
-macroquad = "0.3.26"
+sdl2 = "0.35.2"
