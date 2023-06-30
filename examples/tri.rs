@@ -30,10 +30,10 @@ pub fn main() -> Result<(), String> {
     //     Vertex::new(Vec3::new(0.5, 1., 5.))
     // ];
 
-    let tris: Vec<[Vertex; 3]> = (0..5000).map(|_| [
-        Vertex::new(Vec3::new(0., 0., 5.)),
+    let mut tris: Vec<[Vertex; 3]> = (0..100).map(|_| [
+        Vertex::new(Vec3::new(-0.5, -1., 5.)),
         Vertex::new(Vec3::new(-2., 1.5, 5.)),
-        Vertex::new(Vec3::new(0.5, 1., 5.))
+        Vertex::new(Vec3::new(1.5, 1., 5.))
     ]).collect();
 
     // let projected: [Vertex; 3] = tri.map(|v| ras::project_vert(v, 600, 600));
@@ -55,7 +55,10 @@ pub fn main() -> Result<(), String> {
         }
 
         scr.clear();
-        for tri in &tris {
+        for tri in &mut tris {
+            tri[0].pos.z -= 0.02;
+            tri[1].pos.z -= 0.02;
+            tri[2].pos.z -= 0.02;
             ras::tri(tri, &mut scr);
         }
 
