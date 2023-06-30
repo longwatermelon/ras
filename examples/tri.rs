@@ -73,20 +73,6 @@ pub fn main() -> Result<(), String> {
             false
         )?;
 
-        // for y in 0..rend.window().size().1 {
-        //     for x in 0..rend.window().size().0 {
-        //         let c: Vec3 = scr.color[(y * scr.w as u32 + x) as usize];
-        //         let color: Color = Color::RGB(
-        //             (c.x * 255.) as u8,
-        //             (c.y * 255.) as u8,
-        //             (c.z * 255.) as u8
-        //         );
-
-        //         rend.set_draw_color(color);
-        //         rend.draw_point(Point::new(x as i32, y as i32))?;
-        //     }
-        // }
-
         // Render wireframe
         rend.set_draw_color(Color::RGB(255, 0, 0));
         rend.draw_line(
