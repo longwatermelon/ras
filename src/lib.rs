@@ -122,20 +122,17 @@ fn fill_tri_part(y0: f32, y1: f32,
     let color_slice: &mut [Vec3] = scr.color.as_mut_slice();
     let zbuf_slice: &mut [f32] = scr.zbuf.as_mut_slice();
 
-    for y in (y0 as i32)..(y1 as i32) {
+    if y0 < 0. {
+        left.advance_dy(-y0);
+        right.advance_dy(-y0);
+    }
+
+    for y in (i32::max(y0 as i32, 0))..(i32::min(y1 as i32, scr.h as i32 - 1)) {
         left.advance_dy(1.);
         right.advance_dy(1.);
 
-        if y < 0 || y >= scr.h as i32 {
-            continue;
-        }
-
         let dzdx: f32 = (right.orig.pos.z - left.orig.pos.z) / (right.orig.pos.x - left.orig.pos.x);
-        for x in (left.orig.pos.x as i32)..(right.orig.pos.x as i32) {
-            if x < 0 || x >= scr.w as i32 {
-                continue;
-            }
-
+        for x in (i32::max(left.orig.pos.x as i32, 0))..(i32::min(right.orig.pos.x as i32, scr.w as i32 - 1)) {
             let dx: f32 = x as f32 - left.orig.pos.x;
             let z: f32 = left.orig.pos.z + dzdx * dx;
 
