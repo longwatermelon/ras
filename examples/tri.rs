@@ -5,8 +5,7 @@ use macroquad::{
     color::*,
     input::*,
     time::*,
-    texture::*,
-    shapes::*
+    texture::*
 };
 use image::DynamicImage;
 
@@ -14,13 +13,13 @@ use image::DynamicImage;
 async fn main() {
     let mut scr: Screen = Screen::new(600, 600);
 
-    let mut tris: Vec<[Vertex; 3]> = (0..500).map(|_| [
+    let mut tris: Vec<[Vertex; 3]> = (0..1).map(|_| [
         Vertex::new(Vec3::new(0., 0., 3.), Vec2::new(0., 0.)),
         Vertex::new(Vec3::new(1., 0.5, 3.), Vec2::new(1., 0.)),
         Vertex::new(Vec3::new(1., 1., 3.), Vec2::new(1., 1.))
     ]).collect();
 
-    let projected: [Vertex; 3] = tris[0].map(|v| ras::project_vert(v, 600, 600).unwrap());
+    // let projected: [Vertex; 3] = tris[0].map(|v| ras::project_vert(v, 600, 600).unwrap());
 
     let image: DynamicImage = image::open("res/test.png")
                                 .map_err(|e| e.to_string()).unwrap();
@@ -31,8 +30,10 @@ async fn main() {
             println!("Fps {}", get_fps());
         }
 
+        // Fill screen buffer
+        scr.clear();
         for tri in &mut tris {
-            tri[0].pos.z -= 0.02;
+            tri[0].pos.z += 0.1;
             ras::tri(tri, &image, &mut scr);
         }
 
@@ -49,24 +50,6 @@ async fn main() {
         }
 
         draw_texture(Texture2D::from_rgba8(600, 600, bytes.as_slice()), 0., 0., WHITE);
-
-        draw_line(
-            projected[0].pos.x, projected[0].pos.y,
-            projected[1].pos.x, projected[1].pos.y,
-            2., RED
-        );
-
-        draw_line(
-            projected[0].pos.x, projected[0].pos.y,
-            projected[2].pos.x, projected[2].pos.y,
-            2., RED
-        );
-
-        draw_line(
-            projected[2].pos.x, projected[2].pos.y,
-            projected[1].pos.x, projected[1].pos.y,
-            2., RED
-        );
 
         next_frame().await;
     }
