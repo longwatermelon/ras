@@ -1,13 +1,15 @@
-use glam::Vec3;
+use glam::{Vec2, Vec3};
+use image::{DynamicImage, GenericImageView};
 
 #[derive(Clone, Copy)]
 pub struct Vertex {
-    pub pos: Vec3
+    pub pos: Vec3,
+    pub tc: Vec2
 }
 
 impl Vertex {
-    pub fn new(pos: Vec3) -> Self {
-        Self { pos }
+    pub fn new(pos: Vec3, tc: Vec2) -> Self {
+        Self { pos, tc }
     }
 }
 
@@ -36,15 +38,18 @@ impl Screen {
 struct MovingPoint {
     orig: Vertex,
     dxdy: f32,
-    dzdy: f32
+    dzdy: f32,
+    dtcdy: Vec2
 }
 
 impl MovingPoint {
     fn new(orig: Vertex, to: Vertex) -> Self {
+        let oody: f32 = 1. / (to.pos.y - orig.pos.y);
         Self {
             orig,
-            dxdy: (to.pos.x - orig.pos.x) / (to.pos.y - orig.pos.y),
-            dzdy: (to.pos.z - orig.pos.z) / (to.pos.y - orig.pos.y)
+            dxdy: (to.pos.x - orig.pos.x) * oody,
+            dzdy: (to.pos.z - orig.pos.z) * oody,
+            dtcdy: (to.tc - orig.tc) * oody
         }
     }
 
@@ -52,10 +57,11 @@ impl MovingPoint {
         self.orig.pos.x += self.dxdy * dy;
         self.orig.pos.y += dy;
         self.orig.pos.z += self.dzdy * dy;
+        self.orig.tc += self.dtcdy * dy;
     }
 }
 
-pub fn tri(verts: &[Vertex; 3], scr: &mut Screen) {
+pub fn tri(verts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
     let scrverts_opt: [Option<Vertex>; 3] = verts.map(|v| project_vert(v, scr.w, scr.h));
     // If any vertex is too close or behind the camera, don't render it
     if scrverts_opt[0].is_none() || scrverts_opt[1].is_none() || scrverts_opt[2].is_none() {
@@ -67,7 +73,7 @@ pub fn tri(verts: &[Vertex; 3], scr: &mut Screen) {
     // Sort scrverts by y, with [0] being highest on screen and [2] being lowest on screen
     scrverts.sort_by(|a, b| a.pos.y.partial_cmp(&b.pos.y).unwrap());
 
-    fill_tri(&scrverts, scr);
+    fill_tri(&scrverts, tex, scr);
 }
 
 pub fn project_vert(v: Vertex, w: usize, h: usize) -> Option<Vertex> {
@@ -75,16 +81,19 @@ pub fn project_vert(v: Vertex, w: usize, h: usize) -> Option<Vertex> {
         None
     } else {
         Some(
-            Vertex::new(Vec3::new(
-                (v.pos.x / v.pos.z + 0.5) * w as f32,
-                (v.pos.y / v.pos.z + 0.5) * h as f32,
-                v.pos.z
-            ))
+            Vertex::new(
+                Vec3::new(
+                    (v.pos.x / v.pos.z + 0.5) * w as f32,
+                    (v.pos.y / v.pos.z + 0.5) * h as f32,
+                    v.pos.z
+                ),
+                v.tc
+            )
         )
     }
 }
 
-fn fill_tri(scrverts: &[Vertex; 3], scr: &mut Screen) {
+fn fill_tri(scrverts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
     let mut mp01: MovingPoint = MovingPoint::new(scrverts[0], scrverts[1]);
     let mut mp02: MovingPoint = MovingPoint::new(scrverts[0], scrverts[2]);
     let mut mp12: MovingPoint = MovingPoint::new(scrverts[1], scrverts[2]);
@@ -98,7 +107,7 @@ fn fill_tri(scrverts: &[Vertex; 3], scr: &mut Screen) {
 
     fill_tri_part(
         scrverts[0].pos.y, scrverts[1].pos.y,
-        left0, right0, scr
+        left0, right0, tex, scr
     );
 
     // Middle to bottom
@@ -110,13 +119,13 @@ fn fill_tri(scrverts: &[Vertex; 3], scr: &mut Screen) {
 
     fill_tri_part(
         scrverts[1].pos.y, scrverts[2].pos.y,
-        left1, right1, scr
+        left1, right1, tex, scr
     );
 }
 
 fn fill_tri_part(y0: f32, y1: f32,
                  left: &mut MovingPoint, right: &mut MovingPoint,
-                 scr: &mut Screen)
+                 tex: &DynamicImage, scr: &mut Screen)
 {
     // Slices are faster to index than Vec
     let color_slice: &mut [Vec3] = scr.color.as_mut_slice();
@@ -132,12 +141,23 @@ fn fill_tri_part(y0: f32, y1: f32,
         right.advance_dy(1.);
 
         let dzdx: f32 = (right.orig.pos.z - left.orig.pos.z) / (right.orig.pos.x - left.orig.pos.x);
+        let dtcdx: Vec2 = (right.orig.tc - left.orig.tc) / (right.orig.pos.x - left.orig.pos.x);
         for x in (i32::max(left.orig.pos.x as i32, 0))..(i32::min(right.orig.pos.x as i32, scr.w as i32 - 1)) {
             let dx: f32 = x as f32 - left.orig.pos.x;
+
+            // Depth
             let z: f32 = left.orig.pos.z + dzdx * dx;
 
+            // Texture coord
+            let tc: Vec2 = left.orig.tc + dtcdx * dx;
+            let color: [f32; 4] = tex.get_pixel(
+                (tc.x * tex.width() as f32) as u32,
+                (tc.y * tex.height() as f32) as u32
+            ).0.map(|x| x as f32 / 255.);
+
+            // Put into buffers
             let index: usize = (y * scr.w as i32 + x) as usize;
-            color_slice[index] = Vec3::new(1., 1., 1.);
+            color_slice[index] = Vec3::new(color[0], color[1], color[2]);
             zbuf_slice[index] = z;
         }
     }

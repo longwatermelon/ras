@@ -1,10 +1,12 @@
+use ras::{Screen, Vertex};
 use sdl2::event::Event;
 use sdl2::rect::Rect;
 use sdl2::pixels::Color;
 use sdl2::render::Texture;
 use sdl2::pixels::PixelFormatEnum;
-use glam::Vec3;
-use ras::{Screen, Vertex};
+use sdl2::keyboard::Keycode;
+use glam::{Vec2, Vec3};
+use image::DynamicImage;
 
 pub fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -30,10 +32,10 @@ pub fn main() -> Result<(), String> {
     //     Vertex::new(Vec3::new(0.5, 1., 5.))
     // ];
 
-    let mut tris: Vec<[Vertex; 3]> = (0..100).map(|_| [
-        Vertex::new(Vec3::new(-0.5, -1., 5.)),
-        Vertex::new(Vec3::new(-2., 1.5, 5.)),
-        Vertex::new(Vec3::new(1.5, 1., 5.))
+    let mut tris: Vec<[Vertex; 3]> = (0..1).map(|_| [
+        Vertex::new(Vec3::new(0., 0., 3.), Vec2::new(0., 0.)),
+        Vertex::new(Vec3::new(1., 0.5, 3.), Vec2::new(1., 0.)),
+        Vertex::new(Vec3::new(1., 1., 3.), Vec2::new(1., 1.))
     ]).collect();
 
     // let projected: [Vertex; 3] = tri.map(|v| ras::project_vert(v, 600, 600));
@@ -46,20 +48,31 @@ pub fn main() -> Result<(), String> {
     let timer_subsystem = sdl_context.timer().unwrap();
     let mut start_ticks = timer_subsystem.ticks();
 
+    let image: DynamicImage = image::open("res/test.png")
+                                .map_err(|e| e.to_string())?;
+
     'running: loop {
+        let curr = timer_subsystem.ticks();
+
         for evt in event_pump.poll_iter() {
             match evt {
                 Event::Quit {..} => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Q),
+                    ..
+                } => println!("Elapsed: {} ms", curr - start_ticks),
                 _ => ()
             }
         }
 
+        start_ticks = curr;
+
         scr.clear();
         for tri in &mut tris {
             tri[0].pos.z -= 0.02;
-            tri[1].pos.z -= 0.02;
-            tri[2].pos.z -= 0.02;
-            ras::tri(tri, &mut scr);
+            // tri[1].pos.z -= 0.02;
+            // tri[2].pos.z -= 0.02;
+            ras::tri(tri, &image, &mut scr);
         }
 
         // Render
@@ -90,10 +103,6 @@ pub fn main() -> Result<(), String> {
         )?;
 
         rend.present();
-
-        let curr = timer_subsystem.ticks();
-        println!("Elapsed: {} ms", curr - start_ticks);
-        start_ticks = curr;
     }
 
     Ok(())
