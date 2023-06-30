@@ -86,35 +86,36 @@ pub fn project_vert(v: Vertex, w: usize, h: usize) -> Vertex {
 
 fn fill_tri(scrverts: &[Vertex; 3], scr: &mut Screen) {
     let mp01: MovingPoint = MovingPoint::new(scrverts[0], scrverts[1]);
-    let mp02: MovingPoint = MovingPoint::new(scrverts[0], scrverts[2]);
+    let mut mp02: MovingPoint = MovingPoint::new(scrverts[0], scrverts[2]);
     let mp12: MovingPoint = MovingPoint::new(scrverts[1], scrverts[2]);
 
-    let middle_right_of_0: bool = scrverts[1].pos.x > scrverts[0].pos.x;
-    let middle_right_of_2: bool = scrverts[1].pos.x > scrverts[2].pos.x;
-
-    fill_tri_part(scrverts[0].pos.y, scrverts[1].pos.y,
-        if middle_right_of_0 { &mp02 } else { &mp01 },
-        if middle_right_of_0 { &mp01 } else { &mp02 },
-        scr
+    fill_tri_part(
+        scrverts[0].pos.y, scrverts[1].pos.y,
+        &mp01, &mp02, scr
     );
 
-    fill_tri_part(scrverts[1].pos.y, scrverts[2].pos.y,
-        if middle_right_of_2 { &mp02 } else { &mp12 },
-        if middle_right_of_2 { &mp12 } else { &mp02 },
-        scr
+    mp02.orig = mp02.advance_dy(scrverts[1].pos.y - scrverts[0].pos.y);
+
+    fill_tri_part(
+        scrverts[1].pos.y, scrverts[2].pos.y,
+        &mp02, &mp12, scr
     );
 }
 
 fn fill_tri_part(y0: f32, y1: f32,
-                 left: &MovingPoint, right: &MovingPoint,
+                 mp0: &MovingPoint, mp1: &MovingPoint,
                  scr: &mut Screen)
 {
+    let zero_left_of_one: bool = mp0.advance_dy(0.1).pos.x < mp1.advance_dy(0.1).pos.x;
+    let left: &MovingPoint = if zero_left_of_one { mp0 } else { mp1 };
+    let right: &MovingPoint = if zero_left_of_one { mp1 } else { mp0 };
+
     for y in (y0 as i32)..(y1 as i32) {
         let dy: f32 = y as f32 - y0;
         let l: Vertex = left.advance_dy(dy);
         let r: Vertex = right.advance_dy(dy);
 
-        let dzdx: f32 = (r.pos.z - l.pos.z) / (r.pos.x - l.pos.x);
+        let dzdx: f32 = (r.pos.x - l.pos.x) / (r.pos.x - l.pos.x);
         for x in (l.pos.x as i32)..(r.pos.x as i32) {
             let dx: f32 = x as f32 - l.pos.x;
             let z: f32 = l.pos.z + dzdx * dx;

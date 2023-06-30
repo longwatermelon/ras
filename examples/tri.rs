@@ -26,7 +26,7 @@ pub fn main() -> Result<(), String> {
     let mut scr: Screen = Screen::new(600, 600);
     let tri: [Vertex; 3] = [
         Vertex::new(Vec3::new(0., 0., 5.)),
-        Vertex::new(Vec3::new(1., -0.2, 5.)),
+        Vertex::new(Vec3::new(-2., 1.5, 5.)),
         Vertex::new(Vec3::new(0.5, 1., 5.))
     ];
 
