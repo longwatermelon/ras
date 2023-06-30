@@ -10,4 +10,5 @@ glam = "0.24.1"
 image = "0.23"
 
 [dev-dependencies]
-sdl2 = "0.35.2"
+macroquad = "0.3.26"
+

@@ -1,110 +1,84 @@
 use ras::{Screen, Vertex};
-use sdl2::event::Event;
-use sdl2::rect::Rect;
-use sdl2::pixels::Color;
-use sdl2::render::Texture;
-use sdl2::pixels::PixelFormatEnum;
-use sdl2::keyboard::Keycode;
 use glam::{Vec2, Vec3};
+use macroquad::{
+    window::*,
+    color::*,
+    input::*,
+    time::*,
+    texture::*,
+    shapes::*
+};
 use image::DynamicImage;
 
-pub fn main() -> Result<(), String> {
-    let sdl_context = sdl2::init()?;
-    let video_subsystem = sdl_context.video()?;
-
-    let window = video_subsystem
-        .window("Triangle test", 600, 600)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let mut rend = window
-        .into_canvas()
-        .present_vsync()
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
-
+#[macroquad::main(window_conf)]
+async fn main() {
     let mut scr: Screen = Screen::new(600, 600);
-    // let tri: [Vertex; 3] = [
-    //     Vertex::new(Vec3::new(0., 0., 5.)),
-    //     Vertex::new(Vec3::new(-2., 1.5, 5.)),
-    //     Vertex::new(Vec3::new(0.5, 1., 5.))
-    // ];
 
-    let mut tris: Vec<[Vertex; 3]> = (0..1).map(|_| [
+    let mut tris: Vec<[Vertex; 3]> = (0..500).map(|_| [
         Vertex::new(Vec3::new(0., 0., 3.), Vec2::new(0., 0.)),
         Vertex::new(Vec3::new(1., 0.5, 3.), Vec2::new(1., 0.)),
         Vertex::new(Vec3::new(1., 1., 3.), Vec2::new(1., 1.))
     ]).collect();
 
-    // let projected: [Vertex; 3] = tri.map(|v| ras::project_vert(v, 600, 600));
-
-    let texture_creator = rend.texture_creator();
-    let mut scrtex: Texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 600, 600)
-        .map_err(|e| e.to_string())?;
-
-    let timer_subsystem = sdl_context.timer().unwrap();
-    let mut start_ticks = timer_subsystem.ticks();
+    let projected: [Vertex; 3] = tris[0].map(|v| ras::project_vert(v, 600, 600).unwrap());
 
     let image: DynamicImage = image::open("res/test.png")
-                                .map_err(|e| e.to_string())?;
+                                .map_err(|e| e.to_string()).unwrap();
+    let mut bytes: Vec<u8> = vec![0; 600 * 600 * 4];
 
-    'running: loop {
-        let curr = timer_subsystem.ticks();
-
-        for evt in event_pump.poll_iter() {
-            match evt {
-                Event::Quit {..} => break 'running,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Q),
-                    ..
-                } => println!("Elapsed: {} ms", curr - start_ticks),
-                _ => ()
-            }
+    loop {
+        if is_key_pressed(KeyCode::Space) {
+            println!("Fps {}", get_fps());
         }
 
-        start_ticks = curr;
-
-        scr.clear();
         for tri in &mut tris {
             tri[0].pos.z -= 0.02;
-            // tri[1].pos.z -= 0.02;
-            // tri[2].pos.z -= 0.02;
             ras::tri(tri, &image, &mut scr);
         }
 
         // Render
-        rend.set_draw_color(Color::RGB(0, 0, 0));
-        rend.clear();
+        clear_background(BLACK);
 
-        // Render filled
-        scrtex.with_lock(None, |buf: &mut [u8], pitch: usize| {
-            let color_slice = scr.color.as_mut_slice();
-            for y in 0..600 {
-                for x in 0..600 {
-                    let offset: usize = y * pitch + x * 3;
-                    buf[offset] = (color_slice[y * 600 + x].x * 255.) as u8;
-                    buf[offset + 1] = (color_slice[y * 600 + x].y * 255.) as u8;
-                    buf[offset + 2] = (color_slice[y * 600 + x].z * 255.) as u8;
-                }
-            }
-        })?;
+        let bytes_slice: &mut [u8] = bytes.as_mut_slice();
+        for i in 0..(600 * 600) {
+            let offset: usize = i * 4;
+            bytes_slice[offset] = (scr.color[i].x * 255.) as u8;
+            bytes_slice[offset + 1] = (scr.color[i].y * 255.) as u8;
+            bytes_slice[offset + 2] = (scr.color[i].z * 255.) as u8;
+            bytes_slice[offset + 3] = 255;
+        }
 
-        rend.copy_ex(
-            &scrtex,
-            None,
-            Rect::new(0, 0, 600, 600),
-            0.,
-            None,
-            false,
-            false
-        )?;
+        draw_texture(Texture2D::from_rgba8(600, 600, bytes.as_slice()), 0., 0., WHITE);
 
-        rend.present();
+        draw_line(
+            projected[0].pos.x, projected[0].pos.y,
+            projected[1].pos.x, projected[1].pos.y,
+            2., RED
+        );
+
+        draw_line(
+            projected[0].pos.x, projected[0].pos.y,
+            projected[2].pos.x, projected[2].pos.y,
+            2., RED
+        );
+
+        draw_line(
+            projected[2].pos.x, projected[2].pos.y,
+            projected[1].pos.x, projected[1].pos.y,
+            2., RED
+        );
+
+        next_frame().await;
     }
+}
 
-    Ok(())
+fn window_conf() -> Conf {
+    Conf {
+        window_title: String::from("Raycast demo"),
+        window_width: 600,
+        window_height: 600,
+        window_resizable: false,
+        ..Default::default()
+    }
 }
 
