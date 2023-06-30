@@ -52,19 +52,11 @@ impl MovingPoint {
     fn advance_dy(&self, dy: f32) -> Vertex {
         Vertex::new(
             Vec3::new(
-                self.advance_x(dy),
+                self.orig.pos.x + self.dxdy * dy,
                 self.orig.pos.y + dy,
-                self.advance_z(dy)
+                self.orig.pos.z + self.dzdy * dy
             )
         )
-    }
-
-    fn advance_x(&self, dy: f32) -> f32 {
-        self.orig.pos.x + self.dxdy * dy
-    }
-
-    fn advance_z(&self, dy: f32) -> f32 {
-        self.orig.pos.z + self.dzdy * dy
     }
 }
 
@@ -110,19 +102,22 @@ fn fill_tri_part(y0: f32, y1: f32,
     let left: &MovingPoint = if zero_left_of_one { mp0 } else { mp1 };
     let right: &MovingPoint = if zero_left_of_one { mp1 } else { mp0 };
 
+    let color_slice = scr.color.as_mut_slice();
+    let zbuf_slice = scr.zbuf.as_mut_slice();
+
     for y in (y0 as i32)..(y1 as i32) {
         let dy: f32 = y as f32 - y0;
         let l: Vertex = left.advance_dy(dy);
         let r: Vertex = right.advance_dy(dy);
 
-        let dzdx: f32 = (r.pos.x - l.pos.x) / (r.pos.x - l.pos.x);
+        let dzdx: f32 = (r.pos.z - l.pos.z) / (r.pos.x - l.pos.x);
         for x in (l.pos.x as i32)..(r.pos.x as i32) {
             let dx: f32 = x as f32 - l.pos.x;
             let z: f32 = l.pos.z + dzdx * dx;
 
-            let index: usize = scr.index(y as usize, x as usize);
-            scr.color[index] = Vec3::new(1., 1., 1.);
-            scr.zbuf[index] = z;
+            let index: usize = (y * scr.w as i32 + x) as usize;
+            color_slice[index] = Vec3::new(1., 1., 1.);
+            zbuf_slice[index] = z;
         }
     }
 }
