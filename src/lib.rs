@@ -23,14 +23,13 @@ impl Screen {
         Self {
             w, h,
             color: vec![Vec3::new(0., 0., 0.); w * h],
-            zbuf: vec![0.; w * h]
+            zbuf: vec![f32::INFINITY; w * h]
         }
     }
 
-    pub fn index(&self, mut row: usize, mut col: usize) -> usize {
-        row = usize::clamp(row, 0, self.w - 1);
-        col = usize::clamp(col, 0, self.h - 1);
-        row * self.w + col
+    pub fn clear(&mut self) {
+        self.color = vec![Vec3::new(0., 0., 0.); self.w * self.h];
+        self.zbuf = vec![f32::INFINITY; self.w * self.h];
     }
 }
 
@@ -49,14 +48,10 @@ impl MovingPoint {
         }
     }
 
-    fn advance_dy(&self, dy: f32) -> Vertex {
-        Vertex::new(
-            Vec3::new(
-                self.orig.pos.x + self.dxdy * dy,
-                self.orig.pos.y + dy,
-                self.orig.pos.z + self.dzdy * dy
-            )
-        )
+    fn advance_dy(&mut self, dy: f32) {
+        self.orig.pos.x += self.dxdy * dy;
+        self.orig.pos.y += dy;
+        self.orig.pos.z += self.dzdy * dy;
     }
 }
 
@@ -77,43 +72,48 @@ pub fn project_vert(v: Vertex, w: usize, h: usize) -> Vertex {
 }
 
 fn fill_tri(scrverts: &[Vertex; 3], scr: &mut Screen) {
-    let mp01: MovingPoint = MovingPoint::new(scrverts[0], scrverts[1]);
+    let mut mp01: MovingPoint = MovingPoint::new(scrverts[0], scrverts[1]);
     let mut mp02: MovingPoint = MovingPoint::new(scrverts[0], scrverts[2]);
-    let mp12: MovingPoint = MovingPoint::new(scrverts[1], scrverts[2]);
+    let mut mp12: MovingPoint = MovingPoint::new(scrverts[1], scrverts[2]);
+
+    let (left0, right0) = if mp01.dxdy < mp02.dxdy {
+        (&mut mp01, &mut mp02)
+    } else {
+        (&mut mp02, &mut mp01)
+    };
 
     fill_tri_part(
         scrverts[0].pos.y, scrverts[1].pos.y,
-        &mp01, &mp02, scr
+        left0, right0, scr
     );
 
-    mp02.orig = mp02.advance_dy(scrverts[1].pos.y - scrverts[0].pos.y);
+    let (left1, right1) = if mp02.orig.pos.x < mp12.orig.pos.x {
+        (&mut mp02, &mut mp12)
+    } else {
+        (&mut mp12, &mut mp02)
+    };
 
     fill_tri_part(
         scrverts[1].pos.y, scrverts[2].pos.y,
-        &mp02, &mp12, scr
+        left1, right1, scr
     );
 }
 
 fn fill_tri_part(y0: f32, y1: f32,
-                 mp0: &MovingPoint, mp1: &MovingPoint,
+                 left: &mut MovingPoint, right: &mut MovingPoint,
                  scr: &mut Screen)
 {
-    let zero_left_of_one: bool = mp0.advance_dy(0.1).pos.x < mp1.advance_dy(0.1).pos.x;
-    let left: &MovingPoint = if zero_left_of_one { mp0 } else { mp1 };
-    let right: &MovingPoint = if zero_left_of_one { mp1 } else { mp0 };
-
     let color_slice = scr.color.as_mut_slice();
     let zbuf_slice = scr.zbuf.as_mut_slice();
 
     for y in (y0 as i32)..(y1 as i32) {
-        let dy: f32 = y as f32 - y0;
-        let l: Vertex = left.advance_dy(dy);
-        let r: Vertex = right.advance_dy(dy);
+        left.advance_dy(1.);
+        right.advance_dy(1.);
 
-        let dzdx: f32 = (r.pos.z - l.pos.z) / (r.pos.x - l.pos.x);
-        for x in (l.pos.x as i32)..(r.pos.x as i32) {
-            let dx: f32 = x as f32 - l.pos.x;
-            let z: f32 = l.pos.z + dzdx * dx;
+        let dzdx: f32 = (right.orig.pos.z - left.orig.pos.z) / (right.orig.pos.x - left.orig.pos.x);
+        for x in (left.orig.pos.x as i32)..(right.orig.pos.x as i32) {
+            let dx: f32 = x as f32 - left.orig.pos.x;
+            let z: f32 = left.orig.pos.z + dzdx * dx;
 
             let index: usize = (y * scr.w as i32 + x) as usize;
             color_slice[index] = Vec3::new(1., 1., 1.);

@@ -54,6 +54,7 @@ pub fn main() -> Result<(), String> {
             }
         }
 
+        scr.clear();
         for tri in &tris {
             ras::tri(tri, &mut scr);
         }
@@ -84,23 +85,6 @@ pub fn main() -> Result<(), String> {
             false,
             false
         )?;
-
-        // Render wireframe
-        // rend.set_draw_color(Color::RGB(255, 0, 0));
-        // rend.draw_line(
-        //     Point::new(projected[0].pos.x as i32, projected[0].pos.y as i32),
-        //     Point::new(projected[1].pos.x as i32, projected[1].pos.y as i32)
-        // )?;
-
-        // rend.draw_line(
-        //     Point::new(projected[2].pos.x as i32, projected[2].pos.y as i32),
-        //     Point::new(projected[1].pos.x as i32, projected[1].pos.y as i32)
-        // )?;
-
-        // rend.draw_line(
-        //     Point::new(projected[0].pos.x as i32, projected[0].pos.y as i32),
-        //     Point::new(projected[2].pos.x as i32, projected[2].pos.y as i32)
-        // )?;
 
         rend.present();
 
