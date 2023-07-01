@@ -13,25 +13,11 @@ use image::DynamicImage;
 async fn main() {
     let mut scr: Screen = Screen::new(600, 600);
 
-    // let mut tris: Vec<[Vertex; 3]> = (0..1).map(|_| [
-    //     Vertex::new(Vec3::new(0., 0., 3.), Vec2::new(0., 0.)),
-    //     Vertex::new(Vec3::new(1., 0., 3.), Vec2::new(1., 0.)),
-    //     Vertex::new(Vec3::new(1., 1., 3.), Vec2::new(1., 1.))
-    // ]).collect();
-    let mut tris: Vec<[Vertex; 3]> = vec![
-        [
-            Vertex::new(Vec3::new(-0.5, -0.5, 3.), Vec2::new(0., 0.)),
-            Vertex::new(Vec3::new(0.5, -0.5, 3.), Vec2::new(1., 0.)),
-            Vertex::new(Vec3::new(0.5, 0.5, 3.), Vec2::new(1., 1.))
-        ],
-        [
-            Vertex::new(Vec3::new(-0.5, -0.5, 3.), Vec2::new(0., 0.)),
-            Vertex::new(Vec3::new(-0.5, 0.5, 3.), Vec2::new(0., 1.)),
-            Vertex::new(Vec3::new(0.5, 0.5, 3.), Vec2::new(1., 1.))
-        ]
-    ];
-
-    // let projected: [Vertex; 3] = tris[0].map(|v| ras::project_vert(v, 600, 600).unwrap());
+    let mut tris: Vec<[Vertex; 3]> = (0..100).map(|_| [
+        Vertex::new(Vec3::new(0., 0., 3.), Vec2::new(0., 0.)),
+        Vertex::new(Vec3::new(1., 0., 3.), Vec2::new(1., 0.)),
+        Vertex::new(Vec3::new(1., 1., 3.), Vec2::new(1., 1.))
+    ]).collect();
 
     let image: DynamicImage = image::open("res/test.png")
                                 .map_err(|e| e.to_string()).unwrap();
@@ -44,9 +30,6 @@ async fn main() {
 
         // Fill screen buffer
         scr.clear();
-        tris[0][0].pos.z += 0.1;
-        tris[0][1].pos.z += 0.1;
-        tris[1][0].pos.z += 0.1;
         for tri in &mut tris {
             ras::tri(tri, &image, &mut scr);
         }
