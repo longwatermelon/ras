@@ -23,6 +23,8 @@ async fn main() {
                                 .map_err(|e| e.to_string()).unwrap();
     let mut bytes: Vec<u8> = vec![0; 600 * 600 * 4];
 
+    println!("Rendering {} triangles", tris.len());
+
     loop {
         if is_key_pressed(KeyCode::Space) {
             println!("Fps {}", get_fps());
