@@ -133,8 +133,8 @@ fn fill_tri_part(y0: f32, y1: f32,
                  bcache: &BaryCache, scr: &mut Screen)
 {
     let tri: [Vec3; 3] = scrverts.map(|x| x.pos);
-    // let ooz: Vec3 = 1. / Vec3::from_array(scrverts.map(|x| x.pos.z));
     let ooz: [f32; 3] = scrverts.map(|x| 1. / x.pos.z);
+
     // Slices are faster to index than Vec
     let color_slice: &mut [Vec3] = scr.color.as_mut_slice();
     let zbuf_slice: &mut [f32] = scr.zbuf.as_mut_slice();
