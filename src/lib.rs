@@ -128,6 +128,8 @@ fn fill_tri_part(y0: f32, y1: f32,
                  scr: &mut Screen)
 {
     let tri: [Vec3; 3] = scrverts.map(|x| x.pos);
+    // let ooz: Vec3 = 1. / Vec3::from_array(scrverts.map(|x| x.pos.z));
+    let ooz: [f32; 3] = scrverts.map(|x| 1. / x.pos.z);
     // Slices are faster to index than Vec
     let color_slice: &mut [Vec3] = scr.color.as_mut_slice();
     let zbuf_slice: &mut [f32] = scr.zbuf.as_mut_slice();
@@ -151,13 +153,13 @@ fn fill_tri_part(y0: f32, y1: f32,
 
             // Texture coord
             let bary: Vec3 = util::barycentric(Vec3::new(x as f32, y as f32, z), &tri);
-            let mut tc: Vec2 = (scrverts[0].tc * bary.x / scrverts[0].pos.z +
-                           scrverts[1].tc * bary.y / scrverts[1].pos.z +
-                           scrverts[2].tc * bary.z / scrverts[2].pos.z)
+            let mut tc: Vec2 = (scrverts[0].tc * bary.x * ooz[0] +
+                           scrverts[1].tc * bary.y * ooz[1] +
+                           scrverts[2].tc * bary.z * ooz[2])
                             /
-                           (bary.x / scrverts[0].pos.z +
-                            bary.y / scrverts[1].pos.z +
-                            bary.z / scrverts[2].pos.z);
+                           (bary.x * ooz[0] +
+                            bary.y * ooz[1] +
+                            bary.z * ooz[2]);
             tc.x = tc.x.clamp(0., 1.);
             tc.y = tc.y.clamp(0., 1.);
 
