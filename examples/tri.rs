@@ -15,7 +15,7 @@ async fn main() {
 
     let mut tris: Vec<[Vertex; 3]> = (0..1).map(|_| [
         Vertex::new(Vec3::new(0., 0., 3.), Vec2::new(0., 0.)),
-        Vertex::new(Vec3::new(1., 0.5, 3.), Vec2::new(1., 0.)),
+        Vertex::new(Vec3::new(1., 0., 3.), Vec2::new(1., 0.)),
         Vertex::new(Vec3::new(1., 1., 3.), Vec2::new(1., 1.))
     ]).collect();
 

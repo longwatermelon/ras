@@ -1,3 +1,5 @@
+pub mod util;
+
 use glam::{Vec2, Vec3};
 use image::{DynamicImage, GenericImageView};
 
@@ -107,7 +109,7 @@ fn fill_tri(scrverts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
 
     fill_tri_part(
         scrverts[0].pos.y, scrverts[1].pos.y,
-        left0, right0, tex, scr
+        left0, right0, tex, scrverts, scr
     );
 
     // Middle to bottom
@@ -119,18 +121,21 @@ fn fill_tri(scrverts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
 
     fill_tri_part(
         scrverts[1].pos.y, scrverts[2].pos.y,
-        left1, right1, tex, scr
+        left1, right1, tex, scrverts, scr
     );
 }
 
 fn fill_tri_part(y0: f32, y1: f32,
                  left: &mut MovingPoint, right: &mut MovingPoint,
-                 tex: &DynamicImage, scr: &mut Screen)
+                 tex: &DynamicImage, scrverts: &[Vertex; 3],
+                 scr: &mut Screen)
 {
+    let tri: [Vec3; 3] = scrverts.map(|x| x.pos);
     // Slices are faster to index than Vec
     let color_slice: &mut [Vec3] = scr.color.as_mut_slice();
     let zbuf_slice: &mut [f32] = scr.zbuf.as_mut_slice();
 
+    // Start at a minimum of y = 0
     if y0 < 0. {
         left.advance_dy(-y0);
         right.advance_dy(-y0);
@@ -141,7 +146,6 @@ fn fill_tri_part(y0: f32, y1: f32,
         right.advance_dy(1.);
 
         let dzdx: f32 = (right.orig.pos.z - left.orig.pos.z) / (right.orig.pos.x - left.orig.pos.x);
-        let dtcdx: Vec2 = (right.orig.tc - left.orig.tc) / (right.orig.pos.x - left.orig.pos.x);
         for x in (i32::max(left.orig.pos.x as i32, 0))..(i32::min(right.orig.pos.x as i32, scr.w as i32 - 1)) {
             let dx: f32 = x as f32 - left.orig.pos.x;
 
@@ -149,7 +153,10 @@ fn fill_tri_part(y0: f32, y1: f32,
             let z: f32 = left.orig.pos.z + dzdx * dx;
 
             // Texture coord
-            let tc: Vec2 = left.orig.tc + dtcdx * dx;
+            let bary: Vec3 = util::barycentric(Vec3::new(x as f32, y as f32, z), &tri);
+            let tc: Vec2 = scrverts[0].tc * bary.x +
+                           scrverts[1].tc * bary.y +
+                           scrverts[2].tc * bary.z;
             let color: [f32; 4] = tex.get_pixel(
                 (tc.x * tex.width() as f32) as u32,
                 (tc.y * tex.height() as f32) as u32
