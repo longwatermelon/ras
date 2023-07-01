@@ -40,8 +40,7 @@ impl Screen {
 struct MovingPoint {
     orig: Vertex,
     dxdy: f32,
-    dzdy: f32,
-    dtcdy: Vec2
+    dzdy: f32
 }
 
 impl MovingPoint {
@@ -50,8 +49,7 @@ impl MovingPoint {
         Self {
             orig,
             dxdy: (to.pos.x - orig.pos.x) * oody,
-            dzdy: (to.pos.z - orig.pos.z) * oody,
-            dtcdy: (to.tc - orig.tc) * oody
+            dzdy: (to.pos.z - orig.pos.z) * oody
         }
     }
 
@@ -59,7 +57,6 @@ impl MovingPoint {
         self.orig.pos.x += self.dxdy * dy;
         self.orig.pos.y += dy;
         self.orig.pos.z += self.dzdy * dy;
-        self.orig.tc += self.dtcdy * dy;
     }
 }
 
