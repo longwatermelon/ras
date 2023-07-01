@@ -151,12 +151,19 @@ fn fill_tri_part(y0: f32, y1: f32,
 
             // Texture coord
             let bary: Vec3 = util::barycentric(Vec3::new(x as f32, y as f32, z), &tri);
-            let tc: Vec2 = scrverts[0].tc * bary.x +
-                           scrverts[1].tc * bary.y +
-                           scrverts[2].tc * bary.z;
+            let mut tc: Vec2 = (scrverts[0].tc * bary.x / scrverts[0].pos.z +
+                           scrverts[1].tc * bary.y / scrverts[1].pos.z +
+                           scrverts[2].tc * bary.z / scrverts[2].pos.z)
+                            /
+                           (bary.x / scrverts[0].pos.z +
+                            bary.y / scrverts[1].pos.z +
+                            bary.z / scrverts[2].pos.z);
+            tc.x = tc.x.clamp(0., 1.);
+            tc.y = tc.y.clamp(0., 1.);
+
             let color: [f32; 4] = tex.get_pixel(
-                (tc.x * tex.width() as f32) as u32,
-                (tc.y * tex.height() as f32) as u32
+                (tc.x * (tex.width() - 1) as f32) as u32,
+                (tc.y * (tex.height() - 1) as f32) as u32
             ).0.map(|x| x as f32 / 255.);
 
             // Put into buffers
