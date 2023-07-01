@@ -1,4 +1,5 @@
-pub mod util;
+mod util;
+use util::BaryCache;
 
 use glam::{Vec2, Vec3};
 use image::{DynamicImage, GenericImageView};
@@ -97,6 +98,8 @@ fn fill_tri(scrverts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
     let mut mp02: MovingPoint = MovingPoint::new(scrverts[0], scrverts[2]);
     let mut mp12: MovingPoint = MovingPoint::new(scrverts[1], scrverts[2]);
 
+    let bcache: BaryCache = BaryCache::new(&scrverts.map(|x| x.pos));
+
     // Top to middle
     let (left0, right0) = if mp01.dxdy < mp02.dxdy {
         (&mut mp01, &mut mp02)
@@ -106,7 +109,8 @@ fn fill_tri(scrverts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
 
     fill_tri_part(
         scrverts[0].pos.y, scrverts[1].pos.y,
-        left0, right0, tex, scrverts, scr
+        left0, right0, tex, scrverts,
+        &bcache, scr
     );
 
     // Middle to bottom
@@ -118,14 +122,15 @@ fn fill_tri(scrverts: &[Vertex; 3], tex: &DynamicImage, scr: &mut Screen) {
 
     fill_tri_part(
         scrverts[1].pos.y, scrverts[2].pos.y,
-        left1, right1, tex, scrverts, scr
+        left1, right1, tex, scrverts,
+        &bcache, scr
     );
 }
 
 fn fill_tri_part(y0: f32, y1: f32,
                  left: &mut MovingPoint, right: &mut MovingPoint,
                  tex: &DynamicImage, scrverts: &[Vertex; 3],
-                 scr: &mut Screen)
+                 bcache: &BaryCache, scr: &mut Screen)
 {
     let tri: [Vec3; 3] = scrverts.map(|x| x.pos);
     // let ooz: Vec3 = 1. / Vec3::from_array(scrverts.map(|x| x.pos.z));
@@ -152,7 +157,7 @@ fn fill_tri_part(y0: f32, y1: f32,
             let z: f32 = left.orig.pos.z + dzdx * dx;
 
             // Texture coord
-            let bary: Vec3 = util::barycentric(Vec3::new(x as f32, y as f32, z), &tri);
+            let bary: Vec3 = util::barycentric(Vec3::new(x as f32, y as f32, z), &tri, bcache);
             let mut tc: Vec2 = (scrverts[0].tc * bary.x * ooz[0] +
                            scrverts[1].tc * bary.y * ooz[1] +
                            scrverts[2].tc * bary.z * ooz[2])
